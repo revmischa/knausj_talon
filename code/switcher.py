@@ -3,7 +3,7 @@ import re
 import time
 
 import talon
-from talon import Context, Module, imgui, ui, fs, actions
+from talon import Context, Module, imgui, ui, fs, actions, app
 
 # Construct at startup a list of overides for application names (similar to how homophone list is managed)
 # ie for a given talon recognition word set  `one note`, recognized this in these switcher functions as `ONENOTE`
@@ -27,26 +27,18 @@ overrides = {}
 running_application_dict = {}
 
 
-@mod.capture
+@mod.capture(rule="{self.running}")  # | <user.text>)")
 def running_applications(m) -> str:
     "Returns a single application name"
-
-
-@mod.capture
-def launch_applications(m) -> str:
-    "Returns a single application name"
-
-
-@ctx.capture(rule="{self.running}")  # | <user.text>)")
-def running_applications(m):
     try:
         return m.running
     except AttributeError:
         return m.text
 
 
-@ctx.capture(rule="{self.launch}")
-def launch_applications(m):
+@mod.capture(rule="{self.launch}")
+def launch_applications(m) -> str:
+    "Returns a single application name"
     return m.launch
 
 
@@ -101,10 +93,6 @@ def update_overrides(name, flags):
                     overrides[line[0].lower()] = line[1].strip()
 
         update_lists()
-
-
-update_overrides(None, None)
-fs.watch(overrides_directory, update_overrides)
 
 
 @mod.action_class
@@ -162,7 +150,7 @@ class Actions:
         gui.hide()
 
 
-@imgui.open(software=False)
+@imgui.open(software=app.platform == "linux")
 def gui(gui: imgui.GUI):
     gui.text("Names of running applications")
     gui.line()
@@ -200,10 +188,19 @@ def ui_event(event, arg):
     if event in ("app_launch", "app_close"):
         update_lists()
 
+
 # Currently update_launch_list only does anything on mac, so we should make sure
 # to initialize user launch to avoid getting "List not found: user.launch"
 # errors on other platforms.
 ctx.lists["user.launch"] = {}
-update_launch_list()
-ui.register("", ui_event)
 
+
+# Talon starts faster if you don't use the `talon.ui` module during launch
+def on_ready():
+    update_overrides(None, None)
+    fs.watch(overrides_directory, update_overrides)
+    update_launch_list()
+    ui.register("", ui_event)
+# NOTE: please update this from "launch" to "ready" in Talon v0.1.5
+app.register("launch", on_ready)
+# app.register("ready", on_ready)
