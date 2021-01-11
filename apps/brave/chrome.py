@@ -6,10 +6,6 @@ mod = Module()
 mod.apps.chrome = "app.name: Google Chrome"
 mod.apps.chrome = "app.name: chrome.exe"
 
-mod.apps.chrome = "app.name: Brave Browser"
-mod.apps.chrome = "app.name:  brave"
-
-
 ctx.matches = r"""
 app: chrome
 """
@@ -29,3 +25,4 @@ class user_actions:
             actions.key("cmd-9")
         else:
             actions.key("ctrl-9")
+
